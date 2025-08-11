@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bucket.social CAN Service - AT Protocol Blob Storage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 500;
+            box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .hero {
+            padding: 3rem 2rem;
+            background: linear-gradient(45deg, #f0f2f5, #ffffff);
+            text-align: center;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .feature {
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .feature:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .docs-section {
+            padding: 2rem;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .doc-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #ecf0f1;
+        }
+
+        .doc-card h4 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .endpoint {
+            background: #2c3e50;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .auth-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .auth-info strong {
+            color: #856404;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.8rem 2rem;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .hero h2 {
+                font-size: 1.8rem;
+            }
+            
+            .docs-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🪣 bucket.social</div>
+            <div class="tagline">Content Addressable Network (CAN) Service</div>
+            <div class="status-badge">🟢 Service Online</div>
+        </header>
+
+        <div class="main-content">
+            <div class="hero">
+                <h2>AT Protocol Blob Storage</h2>
+                <p>Store, manage, and retrieve blobs with user-friendly keys using AT Protocol as the backend. Features versioning, domain mapping, and comprehensive API access.</p>
+                <a href="#docs" class="btn">Get Started</a>
+                <a href="/health" class="btn btn-outline">Health Check</a>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🗝️</div>
+                    <h3>User-Friendly Keys</h3>
+                    <p>Map human-readable keys to AT Protocol blob CIDs. No more dealing with complex content hashes directly.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Version Control</h3>
+                    <p>Optional versioning system to maintain history of your blobs with timestamps and comments.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <h3>AT Protocol Auth</h3>
+                    <p>Secure authentication using your AT Protocol handle and app password. Your data stays in your PDS.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Domain Mapping</h3>
+                    <p>Support for custom domains and CDN integration for fast, global content delivery.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>RESTful API</h3>
+                    <p>Simple REST API for all operations. Upload, retrieve, list, and delete blobs with ease.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Secure & Rate Limited</h3>
+                    <p>Built-in security headers, CORS support, and per-user rate limiting to prevent abuse.</p>
+                </div>
+            </div>
+
+            <div class="docs-section" id="docs">
+                <h3 style="text-align: center; color: #2c3e50; margin-bottom: 2rem; font-size: 2rem;">API Documentation</h3>
+                
+                <div class="auth-info">
+                    <strong>🔑 Authentication Required:</strong> All blob endpoints require Basic Authentication using your AT Protocol handle (e.g., alice.bsky.social) as username and your app password.
+                </div>
+
+                <div class="docs-grid">
+                    <div class="doc-card">
+                        <h4>Upload a Blob</h4>
+                        <div class="endpoint">POST /blobs/:key</div>
+                        <p>Upload a new blob or update an existing one with the given key.</p>
+                        <div class="code-block">curl -X POST \
+  -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  -F "file=@myfile.jpg" \
+  -F "comment=Profile picture" \
+  -F "enableVersioning=true" \
+  http://localhost:3002/blobs/profile-pic</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>Retrieve a Blob</h4>
+                        <div class="endpoint">GET /blobs/:key</div>
+                        <p>Download a blob by its key. Add ?version=id for specific versions.</p>
+                        <div class="code-block">curl -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  http://localhost:3002/blobs/profile-pic
+
+# Get specific version
+curl -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  "http://localhost:3002/blobs/profile-pic?version=2024-01-01T10:00:00.000Z"</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>List All Blobs</h4>
+                        <div class="endpoint">GET /blobs</div>
+                        <p>Get a list of all your blobs with metadata and version counts.</p>
+                        <div class="code-block">curl -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  "http://localhost:3002/blobs?limit=50"</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>List Blob Versions</h4>
+                        <div class="endpoint">GET /blobs/:key/versions</div>
+                        <p>Get version history for a specific blob.</p>
+                        <div class="code-block">curl -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  http://localhost:3002/blobs/profile-pic/versions</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>Delete a Blob</h4>
+                        <div class="endpoint">DELETE /blobs/:key</div>
+                        <p>Delete a blob or specific version. Add ?version=id to delete just one version.</p>
+                        <div class="code-block"># Delete entire blob
+curl -X DELETE \
+  -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  http://localhost:3002/blobs/profile-pic
+
+# Delete specific version
+curl -X DELETE \
+  -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  "http://localhost:3002/blobs/profile-pic?version=2024-01-01T10:00:00.000Z"</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>API Information</h4>
+                        <div class="endpoint">GET /api</div>
+                        <p>Get API documentation and endpoint information in JSON format.</p>
+                        <div class="code-block">curl http://localhost:3002/api</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>Health Check</h4>
+                        <div class="endpoint">GET /health</div>
+                        <p>Check service status and version information.</p>
+                        <div class="code-block">curl http://localhost:3002/health</div>
+                        <p><strong>Response:</strong></p>
+                        <div class="code-block">{
+  "status": "ok",
+  "timestamp": "2025-08-11T23:35:23.075Z",
+  "version": "1.0.0",
+  "service": "bucket.social CAN service"
+}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1.5rem; background: #e8f5e8; border-radius: 12px; border-left: 4px solid #4CAF50;">
+                    <h4 style="color: #2e7d32; margin-bottom: 1rem;">🚀 Getting Started</h4>
+                    <ol style="color: #2e7d32; line-height: 1.8;">
+                        <li>Create an AT Protocol account (e.g., on Bluesky)</li>
+                        <li>Generate an app password in your client settings</li>
+                        <li>Use Basic Auth with your handle and app password</li>
+                        <li>Start uploading and managing blobs via the API</li>
+                        <li>Your blobs are stored in your Personal Data Store (PDS)</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 bucket.social CAN Service | Built with AT Protocol | 
+            <a href="https://github.com/librenews/bucket.social" style="color: white; text-decoration: underline;">Source Code</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Add smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Update status badge based on health check
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    document.querySelector('.status-badge').innerHTML = '🟢 Service Online';
+                    document.querySelector('.status-badge').style.background = '#4CAF50';
+                }
+            })
+            .catch(() => {
+                document.querySelector('.status-badge').innerHTML = '🔴 Service Offline';
+                document.querySelector('.status-badge').style.background = '#f44336';
+            });
+
+        // Add copy to clipboard functionality for code blocks
+        document.querySelectorAll('.code-block').forEach(block => {
+            block.style.cursor = 'pointer';
+            block.title = 'Click to copy';
+            block.addEventListener('click', () => {
+                navigator.clipboard.writeText(block.textContent.trim()).then(() => {
+                    const original = block.style.background;
+                    block.style.background = '#4CAF50';
+                    setTimeout(() => {
+                        block.style.background = original;
+                    }, 200);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
