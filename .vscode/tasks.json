@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "Build and Start CAN Service",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*compilation starting.*",
+          "endsPattern": ".*CAN Service started on port.*"
+        },
+        "pattern": [
+          {
+            "regexp": "^(.*)\\((\\d+)\\,(\\d+)\\):\\s+(warning|error)\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        ]
+      }
+    },
+    {
+      "type": "shell",
+      "label": "Build TypeScript",
+      "command": "npm",
+      "args": ["run", "build"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "type": "shell",
+      "label": "Start Production Server",
+      "command": "npm",
+      "args": ["start"],
+      "group": "build",
+      "dependsOn": "Build TypeScript"
+    },
+    {
+      "type": "shell",
+      "label": "Clean Build",
+      "command": "npm",
+      "args": ["run", "clean"],
+      "group": "build"
+    }
+  ]
+}
