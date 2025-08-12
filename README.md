@@ -53,6 +53,32 @@ npm run build
 npm start
 ```
 
+### PM2 Deployment (Recommended)
+
+For production deployment with process management, monitoring, and clustering:
+
+```bash
+# Install PM2 (included in dependencies)
+npm install
+
+# Production deployment
+npm run pm2:start:prod    # Clustered production on port 3000
+
+# Development 
+npm run pm2:start:dev     # Single instance on port 3003
+
+# Staging
+npm run pm2:start:staging # Clustered staging on port 3001
+
+# Management
+npm run pm2:status        # Check status
+npm run pm2:monit         # Real-time monitoring  
+npm run logs              # View logs
+npm run pm2:reload        # Zero-downtime restart
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide and [PM2_GUIDE.md](PM2_GUIDE.md) for quick reference.
+
 ## API Endpoints
 
 All endpoints require Basic Authentication using your AT Protocol handle and app password.

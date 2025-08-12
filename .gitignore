@@ -17,6 +17,12 @@ build/
 .env.test.local
 .env.production.local
 
+# PM2 files
+.pm2/
+logs/*.log
+ecosystem.config.js.backup
+dump.pm2
+
 # Runtime data
 pids
 *.pid
