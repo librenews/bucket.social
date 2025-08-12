@@ -35,7 +35,7 @@ npm install
 
 3. Create environment file:
 ```bash
-cp .env.example .env
+cp .env.template .env
 # Edit .env with your configuration
 ```
 
