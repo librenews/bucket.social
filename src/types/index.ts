@@ -98,12 +98,21 @@ export interface ListVersionsResponse {
 }
 
 /**
- * Domain mapping configuration
+ * Domain mapping configuration stored in AT Protocol
  */
 export interface DomainMapping {
   domain: string;
   userHandle: string;
+  userDid: string;
   cdnEnabled?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  status: 'active' | 'pending' | 'suspended';
+  settings?: {
+    publicAccess?: boolean;
+    allowedMimeTypes?: string[];
+    maxFileSize?: number;
+  };
 }
 
 /**
@@ -145,9 +154,10 @@ export enum CANRecordType {
 }
 
 /**
- * Extended Express Request with AT Protocol credentials
+ * Extended Express Request with AT Protocol credentials and domain mapping
  */
 export interface AuthenticatedRequest extends Request {
   atpCredentials?: AtpCredentials;
   userDid?: string;
+  domainMapping?: DomainMapping;
 }

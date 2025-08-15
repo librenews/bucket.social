@@ -237,6 +237,7 @@
                 <h2>AT Protocol Blob Storage</h2>
                 <p>Store, manage, and retrieve blobs with user-friendly keys using AT Protocol as the backend. Features versioning, domain mapping, and comprehensive API access.</p>
                 <a href="#docs" class="btn">Get Started</a>
+                <a href="/domains.html" class="btn btn-outline">🌐 Custom Domains</a>
                 <a href="/health" class="btn btn-outline">Health Check</a>
             </div>
 
@@ -261,8 +262,9 @@
                 
                 <div class="feature">
                     <div class="feature-icon">🌐</div>
-                    <h3>Domain Mapping</h3>
-                    <p>Support for custom domains and CDN integration for fast, global content delivery.</p>
+                    <h3>Custom Domains</h3>
+                    <p>Use your own domain for public blob hosting. Perfect for CDN integration and branded content delivery.</p>
+                    <a href="/domains.html" style="color: #667eea; text-decoration: none; font-weight: 500;">Learn More →</a>
                 </div>
                 
                 <div class="feature">
@@ -275,6 +277,17 @@
                     <div class="feature-icon">🛡️</div>
                     <h3>Secure & Rate Limited</h3>
                     <p>Built-in security headers, CORS support, and per-user rate limiting to prevent abuse.</p>
+                </div>
+            </div>
+
+            <div style="padding: 2rem; background: linear-gradient(45deg, #667eea, #764ba2); color: white; text-align: center;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem;">🌐 Custom Domain Hosting</h3>
+                <p style="font-size: 1.1rem; margin-bottom: 2rem; opacity: 0.9;">
+                    Serve your blobs from your own domain with public access. Perfect for websites, apps, and CDN integration.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                    <a href="/domains.html" class="btn" style="background: white; color: #667eea;">📖 Setup Guide</a>
+                    <a href="/playground.html" class="btn btn-outline" style="border-color: white; color: white;">🔧 Try It Out</a>
                 </div>
             </div>
 
@@ -361,6 +374,34 @@ curl -X DELETE \
   "service": "bucket.social CAN service"
 }</div>
                     </div>
+
+                    <div class="doc-card">
+                        <h4>Register Domain</h4>
+                        <div class="endpoint">POST /domains</div>
+                        <p>Register a new domain for public blob hosting.</p>
+                        <div class="code-block">curl -X POST \
+  -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "yourdomain.com"}' \
+  http://localhost:3002/domains</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>List Domains</h4>
+                        <div class="endpoint">GET /domains</div>
+                        <p>Get all domains registered to your account.</p>
+                        <div class="code-block">curl -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  http://localhost:3002/domains</div>
+                    </div>
+
+                    <div class="doc-card">
+                        <h4>Delete Domain</h4>
+                        <div class="endpoint">DELETE /domains/:domain</div>
+                        <p>Remove a domain registration from your account.</p>
+                        <div class="code-block">curl -X DELETE \
+  -H "Authorization: Basic $(echo -n 'handle:password' | base64)" \
+  http://localhost:3002/domains/yourdomain.com</div>
+                    </div>
                 </div>
 
                 <div style="margin-top: 2rem; padding: 1.5rem; background: #e8f5e8; border-radius: 12px; border-left: 4px solid #4CAF50;">
@@ -371,6 +412,7 @@ curl -X DELETE \
                         <li>Use Basic Auth with your handle and app password</li>
                         <li>Start uploading and managing blobs via the API</li>
                         <li>Your blobs are stored in your Personal Data Store (PDS)</li>
+                        <li><strong>Optional:</strong> <a href="/domains.html" style="color: #2e7d32; text-decoration: underline;">Set up custom domains</a> for public blob hosting</li>
                     </ol>
                 </div>
             </div>

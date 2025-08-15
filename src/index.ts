@@ -11,8 +11,11 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// Import routes
+// Import routes and services
 import blobsRouter from './routes/blobs.js';
+import domainsRouter from './routes/domains.js';
+import { domainDetectionMiddleware } from './middleware/domain.js';
+import { domainRegistry } from './services/domain-registry.js';
 
 // Load environment variables
 dotenv.config();
@@ -60,14 +63,34 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Serve static files from public directory
 app.use(express.static(join(__dirname, '../public')));
 
+// Domain detection middleware (must come before routes)
+app.use(domainDetectionMiddleware);
+
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    service: 'bucket.social CAN service'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Check Redis connection
+    const redisHealthy = await domainRegistry.healthCheck();
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      service: 'bucket.social CAN service',
+      redis: {
+        status: redisHealthy ? 'connected' : 'disconnected',
+        healthy: redisHealthy
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      service: 'bucket.social CAN service',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // API documentation endpoint - serve HTML page for browsers, JSON for API clients
@@ -87,7 +110,12 @@ app.get('/api', (req, res) => {
       'GET /blobs/:key': 'Retrieve a blob by key (add ?version=id for specific version)',
       'GET /blobs/:key/versions': 'List all versions of a blob',
       'DELETE /blobs/:key': 'Delete a blob (add ?version=id to delete specific version)',
-      'GET /blobs': 'List all blobs for authenticated user'
+      'GET /blobs': 'List all blobs for authenticated user',
+      'POST /domains': 'Register a new domain mapping',
+      'GET /domains': 'List all domains for authenticated user',
+      'GET /domains/:domain': 'Get specific domain mapping',
+      'PUT /domains/:domain': 'Update domain mapping settings',
+      'DELETE /domains/:domain': 'Delete domain mapping'
     },
     authentication: 'Basic Auth using AT Protocol handle and app password',
     documentation: 'https://github.com/librenews/bucket.social'
@@ -96,6 +124,9 @@ app.get('/api', (req, res) => {
 
 // Mount blob routes
 app.use('/blobs', blobsRouter);
+
+// Mount domain routes
+app.use('/domains', domainsRouter);
 
 // 404 handler
 app.all('*', (req, res) => {
@@ -119,23 +150,42 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 CAN Service started on port ${PORT}`);
-  console.log(`📝 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API docs: http://localhost:${PORT}/`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Initialize Redis and start server
+async function startServer() {
+  try {
+    // Initialize Redis connection
+    console.log('🔌 Initializing Redis connection...');
+    await domainRegistry.connect();
+    console.log('✅ Redis connected successfully');
+    
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`🚀 CAN Service started on port ${PORT}`);
+      console.log(`📝 Health check: http://localhost:${PORT}/health`);
+      console.log(`📚 API docs: http://localhost:${PORT}/`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Redis: ${process.env.REDIS_URL || 'redis://localhost:6379'}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
+  await domainRegistry.disconnect();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
+  await domainRegistry.disconnect();
   process.exit(0);
 });
+
+// Start the server
+startServer();
 
 export default app;

@@ -6,6 +6,7 @@
 import { Router, Response, Request } from 'express';
 import multer from 'multer';
 import { AtProtocolService } from '../services/atprotocol.js';
+import { domainRegistry } from '../services/domain-registry.js';
 import { authMiddleware, validateKeyMiddleware, rateLimitMiddleware } from '../middleware/auth.js';
 import type { 
   AuthenticatedRequest, 
@@ -146,7 +147,9 @@ router.post('/:key', validateKeyMiddleware, upload.single('file'), async (req: A
  */
 router.get('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.atpCredentials) {
+    // For public blob access via domain, we don't require authentication
+    // The domain mapping will be handled by the domain detection middleware
+    if (!req.atpCredentials && !req.domainMapping) {
       res.status(401).json({
         error: 'UNAUTHORIZED',
         message: 'Authentication required',
@@ -156,11 +159,51 @@ router.get('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, res
       return;
     }
 
+    // Determine which user's blobs to access and their PDS
+    let targetCredentials = req.atpCredentials;
+    let targetPdsUrl: string | null = null;
+
+    if (req.domainMapping && !req.atpCredentials) {
+      // Public access via domain - we need to determine the PDS for this user
+      targetPdsUrl = await domainRegistry.getPdsForDomain(req.domainMapping.domain);
+      if (!targetPdsUrl) {
+        res.status(500).json({
+          error: 'PDS_RESOLUTION_FAILED',
+          message: 'Could not determine PDS for domain',
+          statusCode: 500,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      // Create a minimal credential object for the target user
+      // Note: This is a simplified approach - in production you might want to cache user sessions
+      targetCredentials = {
+        identifier: req.domainMapping.userHandle,
+        password: '' // We'll need to handle this differently for public access
+      };
+
+      console.log(`Domain access: ${req.domainMapping.domain} -> ${req.domainMapping.userHandle} (PDS: ${targetPdsUrl})`);
+    } else if (req.atpCredentials) {
+      // Authenticated access - use the user's own PDS
+      targetPdsUrl = domainRegistry.extractPdsFromHandle(req.atpCredentials.identifier);
+    }
+
+    if (!targetCredentials) {
+      res.status(401).json({
+        error: 'UNAUTHORIZED',
+        message: 'No valid credentials found',
+        statusCode: 401,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
     const key = req.params.key;
     const version = req.query.version as string | undefined;
 
-    // Get the mapping record
-    const record = await atpService.getMappingRecord(req.atpCredentials, key);
+    // Get the mapping record from the appropriate PDS
+    const record = await atpService.getMappingRecord(targetCredentials, key);
     if (!record) {
       res.status(404).json({
         error: 'BLOB_NOT_FOUND',
@@ -190,8 +233,8 @@ router.get('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, res
       selectedVersion = version;
     }
 
-    // Download the blob data
-    const blobData = await atpService.downloadBlob(req.atpCredentials, blobInfo.cid);
+    // Download the blob data from the appropriate PDS
+    const blobData = await atpService.downloadBlob(targetCredentials, blobInfo.cid);
 
     // Set appropriate headers
     res.set({
@@ -199,7 +242,8 @@ router.get('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, res
       'Content-Length': blobInfo.size.toString(),
       'Last-Modified': new Date(blobInfo.uploadedAt).toUTCString(),
       'Cache-Control': 'public, max-age=31536000', // 1 year cache for immutable content
-      ...(selectedVersion && { 'X-Version': selectedVersion })
+      ...(selectedVersion && { 'X-Version': selectedVersion }),
+      ...(req.domainMapping && { 'X-Domain': req.domainMapping.domain })
     });
 
     res.send(blobData);
