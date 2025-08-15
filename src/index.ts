@@ -16,6 +16,7 @@ import blobsRouter from './routes/blobs.js';
 import domainsRouter from './routes/domains.js';
 import { domainDetectionMiddleware } from './middleware/domain.js';
 import { domainRegistry } from './services/domain-registry.js';
+import { blobCache } from './services/blob-cache.js';
 
 // Load environment variables
 dotenv.config();
@@ -69,8 +70,9 @@ app.use(domainDetectionMiddleware);
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Check Redis connection
-    const redisHealthy = await domainRegistry.healthCheck();
+    // Check Redis connections
+    const domainRedisHealthy = await domainRegistry.healthCheck();
+    const blobCacheHealthy = await blobCache.healthCheck();
     
     res.json({
       status: 'ok',
@@ -78,8 +80,14 @@ app.get('/health', async (req, res) => {
       version: process.env.npm_package_version || '1.0.0',
       service: 'bucket.social CAN service',
       redis: {
-        status: redisHealthy ? 'connected' : 'disconnected',
-        healthy: redisHealthy
+        domainRegistry: {
+          status: domainRedisHealthy ? 'connected' : 'disconnected',
+          healthy: domainRedisHealthy
+        },
+        blobCache: {
+          status: blobCacheHealthy ? 'connected' : 'disconnected',
+          healthy: blobCacheHealthy
+        }
       }
     });
   } catch (error) {
@@ -153,10 +161,11 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
 // Initialize Redis and start server
 async function startServer() {
   try {
-    // Initialize Redis connection
-    console.log('🔌 Initializing Redis connection...');
+    // Initialize Redis connections
+    console.log('🔌 Initializing Redis connections...');
     await domainRegistry.connect();
-    console.log('✅ Redis connected successfully');
+    await blobCache.connect();
+    console.log('✅ Redis services connected successfully');
     
     // Start server
     app.listen(PORT, () => {
@@ -176,12 +185,14 @@ async function startServer() {
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   await domainRegistry.disconnect();
+  await blobCache.disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
   await domainRegistry.disconnect();
+  await blobCache.disconnect();
   process.exit(0);
 });
 

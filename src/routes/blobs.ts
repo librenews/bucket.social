@@ -7,6 +7,7 @@ import { Router, Response, Request } from 'express';
 import multer from 'multer';
 import { AtProtocolService } from '../services/atprotocol.js';
 import { domainRegistry } from '../services/domain-registry.js';
+import { blobCache } from '../services/blob-cache.js';
 import { authMiddleware, validateKeyMiddleware, rateLimitMiddleware } from '../middleware/auth.js';
 import type { 
   AuthenticatedRequest, 
@@ -69,8 +70,15 @@ router.post('/:key', validateKeyMiddleware, upload.single('file'), async (req: A
     const fileBuffer = req.file.buffer;
     const mimeType = req.file.mimetype || 'application/octet-stream';
 
-    // Check if record already exists for versioning
-    const existingRecord = await atpService.getMappingRecord(req.atpCredentials, key);
+    // Check if record already exists for versioning (try cache first)
+    let existingRecord = await blobCache.getBlobMapping(req.atpCredentials.identifier, key);
+    if (!existingRecord) {
+      existingRecord = await atpService.getMappingRecord(req.atpCredentials, key);
+      // Cache the result if found
+      if (existingRecord) {
+        await blobCache.setBlobMapping(req.atpCredentials.identifier, key, existingRecord);
+      }
+    }
     const shouldVersion = enableVersioning || existingRecord?.versioningEnabled || false;
 
     // Upload blob to AT Protocol
@@ -119,6 +127,9 @@ router.post('/:key', validateKeyMiddleware, upload.single('file'), async (req: A
 
     // Save the mapping record
     await atpService.putMappingRecord(req.atpCredentials, record);
+
+    // Update cache with new record
+    await blobCache.setBlobMapping(req.atpCredentials.identifier, key, record);
 
     const response: UploadBlobResponse = {
       success: true,
@@ -202,16 +213,22 @@ router.get('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, res
     const key = req.params.key;
     const version = req.query.version as string | undefined;
 
-    // Get the mapping record from the appropriate PDS
-    const record = await atpService.getMappingRecord(targetCredentials, key);
+    // Get the mapping record (try cache first)
+    let record = await blobCache.getBlobMapping(targetCredentials.identifier, key);
     if (!record) {
-      res.status(404).json({
-        error: 'BLOB_NOT_FOUND',
-        message: `Blob with key '${key}' not found`,
-        statusCode: 404,
-        timestamp: new Date().toISOString()
-      });
-      return;
+      record = await atpService.getMappingRecord(targetCredentials, key);
+      // Cache the result if found
+      if (record) {
+        await blobCache.setBlobMapping(targetCredentials.identifier, key, record);
+      } else {
+        res.status(404).json({
+          error: 'BLOB_NOT_FOUND',
+          message: `Blob with key '${key}' not found`,
+          statusCode: 404,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
     }
 
     // Determine which blob to retrieve
@@ -326,16 +343,19 @@ router.delete('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, 
     const key = req.params.key;
     const version = req.query.version as string | undefined;
 
-    // Get the mapping record
-    const record = await atpService.getMappingRecord(req.atpCredentials, key);
+    // Get the mapping record to check if it exists (try cache first)
+    let record = await blobCache.getBlobMapping(req.atpCredentials.identifier, key);
     if (!record) {
-      res.status(404).json({
-        error: 'BLOB_NOT_FOUND',
-        message: `Blob with key '${key}' not found`,
-        statusCode: 404,
-        timestamp: new Date().toISOString()
-      });
-      return;
+      record = await atpService.getMappingRecord(req.atpCredentials, key);
+      if (!record) {
+        res.status(404).json({
+          error: 'BLOB_NOT_FOUND',
+          message: `Blob with key '${key}' not found`,
+          statusCode: 404,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
     }
 
     if (version) {
@@ -357,6 +377,9 @@ router.delete('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, 
       // Update the record
       await atpService.putMappingRecord(req.atpCredentials, record);
 
+      // Update cache with modified record
+      await blobCache.setBlobMapping(req.atpCredentials.identifier, key, record);
+
       res.json({
         success: true,
         message: `Version '${version}' deleted for key '${key}'`
@@ -364,6 +387,9 @@ router.delete('/:key', validateKeyMiddleware, async (req: AuthenticatedRequest, 
     } else {
       // Delete entire blob and all versions
       await atpService.deleteMappingRecord(req.atpCredentials, key);
+
+      // Invalidate cache for this blob
+      await blobCache.invalidateBlobMapping(req.atpCredentials.identifier, key);
 
       res.json({
         success: true,
