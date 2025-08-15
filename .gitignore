@@ -126,3 +126,6 @@ test-uploads/
 *.pem
 *.key
 *.crt
+
+# PM2 Ecosystem config (contains sensitive deployment info)
+ecosystem.config.cjs
