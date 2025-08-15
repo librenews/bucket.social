@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bucket.social Playground - Upload & Manage Blobs</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: #222;
+        }
+        .container {
+            max-width: 600px;
+            margin: 3rem auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+        }
+        .auth {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .auth input {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .dropzone {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .dropzone:hover {
+            background: #f8faff;
+            border-color: #5a6fd8;
+        }
+        .dropzone.dragover {
+            background: #f0f4ff;
+            border-color: #4a5fd0;
+            transform: scale(1.02);
+        }
+        .blobs-list {
+            margin-top: 2rem;
+        }
+        .blob-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .blob-item > div {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .blob-key {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .blob-type {
+            font-size: 0.85em;
+            color: #888;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.3rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: background 0.2s;
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        .status {
+            margin: 1rem 0;
+            text-align: center;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪣 Playground</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 1rem; font-size: 0.9em;">
+            AT Protocol blob management with Content Addressable Network
+        </p>
+        <form class="auth" id="auth-form" autocomplete="off" onsubmit="return false;">
+            <input type="text" id="handle" placeholder="AT Protocol Handle" required />
+            <input type="password" id="app-password" placeholder="App Password" required />
+        </form>
+        <div class="dropzone" id="dropzone">Drag & drop a file here or click to select</div>
+        <input type="file" id="file-input" style="display:none;" />
+        <div class="status" id="status"></div>
+        <div class="blobs-list" id="blobs-list">
+            <!-- Blob items will be rendered here -->
+        </div>
+    </div>
+    <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const statusDiv = document.getElementById('status');
+    const blobsList = document.getElementById('blobs-list');
+    let handle = '';
+    let appPassword = '';
+
+    // Auth input listeners
+    document.getElementById('handle').addEventListener('input', e => handle = e.target.value.trim());
+    document.getElementById('app-password').addEventListener('input', e => appPassword = e.target.value);
+
+    // Dropzone click opens file dialog
+    dropzone.addEventListener('click', () => {
+        console.log('Dropzone clicked, opening file dialog');
+        fileInput.click();
+    });
+
+    // Drag & drop events
+    dropzone.addEventListener('dragover', e => {
+        e.preventDefault();
+        console.log('Drag over detected');
+        dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => {
+        console.log('Drag leave detected');
+        dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        console.log('Drop detected, files:', e.dataTransfer.files.length);
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            console.log('File dropped:', e.dataTransfer.files[0].name);
+            uploadFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileInput.addEventListener('change', e => {
+        console.log('File input changed, files:', e.target.files.length);
+        if (e.target.files.length) {
+            console.log('File selected:', e.target.files[0].name);
+            uploadFile(e.target.files[0]);
+        }
+    });
+
+    // Upload file as blob
+    async function uploadFile(file) {
+        console.log('uploadFile called with:', file.name, file.size, file.type);
+        
+        if (!handle || !appPassword) {
+            console.log('Missing credentials:', { handle: !!handle, appPassword: !!appPassword });
+            setStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        // Validate file size (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+            console.log('File too large:', file.size);
+            setStatus('File too large. Maximum size is 50MB.', true);
+            return;
+        }
+        
+        setStatus(`Uploading ${file.name} (${formatFileSize(file.size)})...`);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('comment', 'Uploaded via playground');
+        formData.append('enableVersioning', 'true');
+        // Use filename as key
+        const key = encodeURIComponent(file.name);
+        
+        console.log('Making upload request to:', `/blobs/${key}`);
+        console.log('FormData contents:', Array.from(formData.entries()));
+        
+        try {
+            const res = await fetch(`/blobs/${key}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                },
+                body: formData
+            });
+            
+            console.log('Upload response status:', res.status, res.statusText);
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('Upload error response:', errorText);
+                throw new Error(errorText);
+            }
+            const result = await res.json();
+            console.log('Upload success:', result);
+            setStatus(`Upload successful! CID: ${result.cid}`);
+            loadBlobs();
+        } catch (err) {
+            console.error('Upload failed:', err);
+            setStatus('Upload failed: ' + err.message, true);
+        }
+    }
+
+    // Load last 20 blobs
+    async function loadBlobs() {
+        if (!handle || !appPassword) {
+            blobsList.innerHTML = '<div style="color:#888;text-align:center;">Enter credentials to view blobs.</div>';
+            return;
+        }
+        try {
+            const res = await fetch(`/blobs?limit=20`, {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const response = await res.json();
+            renderBlobs(response.blobs || []);
+        } catch (err) {
+            blobsList.innerHTML = '<div style="color:#e74c3c;text-align:center;">Failed to load blobs: ' + err.message + '</div>';
+        }
+    }
+
+    // Render blobs list
+    function renderBlobs(blobs) {
+        if (!Array.isArray(blobs) || blobs.length === 0) {
+            blobsList.innerHTML = '<div style="color:#888;text-align:center;">No blobs found.</div>';
+            return;
+        }
+        blobsList.innerHTML = '';
+        blobs.forEach(blob => {
+            const div = document.createElement('div');
+            div.className = 'blob-item';
+            const mimeType = blob.current?.mimeType || '';
+            const size = blob.current?.size ? `(${formatFileSize(blob.current.size)})` : '';
+            div.innerHTML = `
+                <div>
+                    <span class="blob-key">${blob.key}</span>
+                    <span class="blob-type">${mimeType} ${size}</span>
+                </div>
+                <button class="delete-btn" title="Delete" data-key="${blob.key}">Delete</button>
+            `;
+            div.querySelector('.delete-btn').onclick = () => deleteBlob(blob.key);
+            blobsList.appendChild(div);
+        });
+    }
+
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Delete blob
+    async function deleteBlob(key) {
+        if (!handle || !appPassword) {
+            setStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        if (!confirm(`Delete blob "${key}"?`)) return;
+        setStatus('Deleting...');
+        try {
+            const res = await fetch(`/blobs/${encodeURIComponent(key)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            if (!res.ok) throw new Error(await res.text());
+            setStatus('Deleted successfully!');
+            loadBlobs();
+        } catch (err) {
+            setStatus('Delete failed: ' + err.message, true);
+        }
+    }
+
+    // Status helper
+    function setStatus(msg, isError) {
+        statusDiv.textContent = msg;
+        statusDiv.style.color = isError ? '#e74c3c' : '#2c3e50';
+    }
+
+    // Reload blobs when auth changes
+    document.getElementById('handle').addEventListener('change', loadBlobs);
+    document.getElementById('app-password').addEventListener('change', loadBlobs);
+
+    // Initial
+    loadBlobs();
+    </script>
+</body>
+</html>

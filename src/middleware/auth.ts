@@ -28,6 +28,8 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
     const [identifier, password] = credentials.split(':');
     
+    console.log('Auth debug - identifier:', identifier, 'password length:', password?.length);
+    
     if (!identifier || !password) {
       res.status(401).json({
         error: 'INVALID_CREDENTIALS',
@@ -40,6 +42,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     
     // Validate AT Protocol handle format (basic validation)
     if (!isValidAtpHandle(identifier)) {
+      console.log('Auth debug - invalid handle format:', identifier);
       res.status(400).json({
         error: 'INVALID_HANDLE',
         message: 'Invalid AT Protocol handle format.',
@@ -49,6 +52,8 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       return;
     }
     
+    console.log('Auth debug - handle validation passed:', identifier);
+    
     // Attach credentials to request
     req.atpCredentials = {
       identifier: identifier.trim(),
@@ -57,6 +62,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     
     next();
   } catch (error) {
+    console.error('Auth debug - error parsing header:', error);
     res.status(400).json({
       error: 'INVALID_AUTH_HEADER',
       message: 'Failed to parse Authorization header.',

@@ -21,18 +21,23 @@ export class AtProtocolService {
    * Create authenticated AT Protocol agent for a user
    */
   async createAgent(credentials: AtpCredentials, serviceUrl: string = 'https://bsky.social'): Promise<AtpAgent> {
+    console.log('AT Protocol debug - attempting login for:', credentials.identifier, 'service:', serviceUrl);
+    
     const agent = new AtpAgent({ service: serviceUrl });
     
     try {
-      await agent.login({
+      const loginResult = await agent.login({
         identifier: credentials.identifier,
         password: credentials.password
       });
+      
+      console.log('AT Protocol debug - login successful for:', credentials.identifier, 'DID:', loginResult.data.did);
       
       // Cache the agent for this session
       this.agents.set(credentials.identifier, agent);
       return agent;
     } catch (error) {
+      console.error('AT Protocol debug - login failed for:', credentials.identifier, 'error:', error);
       throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -44,6 +49,17 @@ export class AtProtocolService {
     const cached = this.agents.get(credentials.identifier);
     if (cached && cached.session) {
       return cached;
+    }
+    
+    // Determine service URL from handle if not provided
+    if (!serviceUrl && credentials.identifier.includes('.')) {
+      const parts = credentials.identifier.split('.');
+      if (parts.length >= 2) {
+        // Extract domain from handle (e.g., user.bsky.social -> https://bsky.social)
+        const domain = parts.slice(-2).join('.');
+        serviceUrl = `https://${domain}`;
+        console.log('AT Protocol debug - inferred service URL:', serviceUrl, 'from handle:', credentials.identifier);
+      }
     }
     
     return this.createAgent(credentials, serviceUrl);
@@ -148,9 +164,18 @@ export class AtProtocolService {
       
       return response.data.value as unknown as CANMappingRecord;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('RecordNotFound')) {
+      console.log('getMappingRecord debug - error for key:', key, 'error:', error);
+      
+      // Handle various "not found" error messages
+      if (error instanceof Error && (
+        error.message.includes('RecordNotFound') ||
+        error.message.includes('Could not locate record') ||
+        error.message.includes('Record not found')
+      )) {
+        console.log('getMappingRecord debug - record not found, returning null');
         return null;
       }
+      
       throw new Error(`Failed to get mapping record: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

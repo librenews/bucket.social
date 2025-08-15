@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .dropzone.dragover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+        #log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Upload Test</h1>
+    <div class="dropzone" id="dropzone">Drag & drop a file here or click to select</div>
+    <input type="file" id="file-input" style="display:none;" />
+    <div id="log"></div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const log = document.getElementById('log');
+
+        function logMessage(msg) {
+            log.textContent += new Date().toLocaleTimeString() + ': ' + msg + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+
+        logMessage('Page loaded');
+
+        // Dropzone click opens file dialog
+        dropzone.addEventListener('click', () => {
+            logMessage('Dropzone clicked, opening file dialog');
+            fileInput.click();
+        });
+
+        // Drag & drop events
+        dropzone.addEventListener('dragover', e => {
+            e.preventDefault();
+            logMessage('Drag over detected');
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            logMessage('Drag leave detected');
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            logMessage('Drop detected, files: ' + e.dataTransfer.files.length);
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                logMessage('File dropped: ' + file.name + ' (' + file.size + ' bytes)');
+            }
+        });
+
+        fileInput.addEventListener('change', e => {
+            logMessage('File input changed, files: ' + e.target.files.length);
+            if (e.target.files.length) {
+                const file = e.target.files[0];
+                logMessage('File selected: ' + file.name + ' (' + file.size + ' bytes)');
+            }
+        });
+
+        // Test if we can access the server
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                logMessage('Server health check: ' + JSON.stringify(data));
+            })
+            .catch(error => {
+                logMessage('Server health check failed: ' + error.message);
+            });
+    </script>
+</body>
+</html>
