@@ -13,7 +13,7 @@
             color: #222;
         }
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 3rem auto;
             background: #fff;
             border-radius: 16px;
@@ -23,6 +23,33 @@
         h1 {
             text-align: center;
             color: #667eea;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #eee;
+        }
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+        .tab:hover {
+            background: #f8faff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
         .auth {
             display: flex;
@@ -54,26 +81,76 @@
             border-color: #4a5fd0;
             transform: scale(1.02);
         }
-        .blobs-list {
+        .domain-form {
+            background: #f8faff;
+            border: 1px solid #e1e8ff;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .domain-form h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .domain-input {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .domain-input input {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .btn {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+        .btn-outline:hover {
+            background: #667eea;
+            color: #fff;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .blobs-list, .domains-list {
             margin-top: 2rem;
         }
-        .blob-item {
+        .blob-item, .domain-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0.7rem 0.5rem;
             border-bottom: 1px solid #eee;
         }
-        .blob-item > div {
+        .blob-item > div, .domain-item > div {
             display: flex;
             flex-direction: column;
             gap: 0.2rem;
         }
-        .blob-key {
+        .blob-key, .domain-name {
             font-weight: 500;
             color: #2c3e50;
         }
-        .blob-type {
+        .blob-type, .domain-status {
             font-size: 0.85em;
             color: #888;
         }
@@ -95,6 +172,23 @@
             text-align: center;
             color: #2c3e50;
         }
+        .domain-info {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9em;
+        }
+        .domain-info h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .domain-info code {
+            background: #e9ecef;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -111,15 +205,46 @@
         <p style="text-align: center; color: #888; margin-bottom: 2rem; font-size: 0.85em;">
             Upload, manage, and test your blobs. <a href="/domains.html" style="color: #667eea;">Set up custom domains</a> for public hosting.
         </p>
+        
         <form class="auth" id="auth-form" autocomplete="off" onsubmit="return false;">
             <input type="text" id="handle" placeholder="AT Protocol Handle" required />
             <input type="password" id="app-password" placeholder="App Password" required />
         </form>
-        <div class="dropzone" id="dropzone">Drag & drop a file here or click to select</div>
-        <input type="file" id="file-input" style="display:none;" />
-        <div class="status" id="status"></div>
-        <div class="blobs-list" id="blobs-list">
-            <!-- Blob items will be rendered here -->
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="blobs">📁 Blobs</div>
+            <div class="tab" data-tab="domains">🌐 Domains</div>
+        </div>
+        
+        <!-- Blobs Tab -->
+        <div class="tab-content active" id="blobs-tab">
+            <div class="dropzone" id="dropzone">Drag & drop a file here or click to select</div>
+            <input type="file" id="file-input" style="display:none;" />
+            <div class="status" id="status"></div>
+            <div class="blobs-list" id="blobs-list">
+                <!-- Blob items will be rendered here -->
+            </div>
+        </div>
+        
+        <!-- Domains Tab -->
+        <div class="tab-content" id="domains-tab">
+            <div class="domain-form">
+                <h3>Register New Domain</h3>
+                <div class="domain-input">
+                    <input type="text" id="domain-input" placeholder="example.com" />
+                    <button class="btn" onclick="registerDomain()">Register Domain</button>
+                </div>
+                <div class="domain-info">
+                    <h4>How it works:</h4>
+                    <p>1. Register your domain here (requires authentication)</p>
+                    <p>2. Set up DNS: <code>CNAME example.com → bucket.social</code></p>
+                    <p>3. Upload blobs and access them at <code>https://example.com/blobs/filename.jpg</code></p>
+                </div>
+            </div>
+            <div class="status" id="domain-status"></div>
+            <div class="domains-list" id="domains-list">
+                <!-- Domain items will be rendered here -->
+            </div>
         </div>
     </div>
     <script>
@@ -127,8 +252,27 @@
     const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
     const blobsList = document.getElementById('blobs-list');
+    const domainStatusDiv = document.getElementById('domain-status');
+    const domainsList = document.getElementById('domains-list');
     let handle = '';
     let appPassword = '';
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            
+            // Load data for the active tab
+            if (tab.dataset.tab === 'blobs') {
+                loadBlobs();
+            } else if (tab.dataset.tab === 'domains') {
+                loadDomains();
+            }
+        });
+    });
 
     // Auth input listeners
     document.getElementById('handle').addEventListener('input', e => handle = e.target.value.trim());
@@ -265,6 +409,112 @@
         });
     }
 
+    // Register domain
+    async function registerDomain() {
+        const domain = document.getElementById('domain-input').value.trim();
+        
+        if (!domain) {
+            setDomainStatus('Please enter a domain name.', true);
+            return;
+        }
+        
+        if (!handle || !appPassword) {
+            setDomainStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        setDomainStatus(`Registering domain ${domain}...`);
+        
+        try {
+            const res = await fetch('/domains', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ domain })
+            });
+            
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.message || 'Registration failed');
+            }
+            
+            const result = await res.json();
+            setDomainStatus(`Domain ${domain} registered successfully!`);
+            document.getElementById('domain-input').value = '';
+            loadDomains();
+        } catch (err) {
+            console.error('Domain registration failed:', err);
+            setDomainStatus('Registration failed: ' + err.message, true);
+        }
+    }
+
+    // Load domains
+    async function loadDomains() {
+        if (!handle || !appPassword) {
+            domainsList.innerHTML = '<div style="color:#888;text-align:center;">Enter credentials to view domains.</div>';
+            return;
+        }
+        try {
+            const res = await fetch('/domains', {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const domains = await res.json();
+            renderDomains(domains);
+        } catch (err) {
+            domainsList.innerHTML = '<div style="color:#e74c3c;text-align:center;">Failed to load domains: ' + err.message + '</div>';
+        }
+    }
+
+    // Render domains list
+    function renderDomains(domains) {
+        if (!Array.isArray(domains) || domains.length === 0) {
+            domainsList.innerHTML = '<div style="color:#888;text-align:center;">No domains registered.</div>';
+            return;
+        }
+        domainsList.innerHTML = '';
+        domains.forEach(domain => {
+            const div = document.createElement('div');
+            div.className = 'domain-item';
+            div.innerHTML = `
+                <div>
+                    <span class="domain-name">${domain.domain}</span>
+                    <span class="domain-status">Status: ${domain.status} • Created: ${new Date(domain.createdAt).toLocaleDateString()}</span>
+                </div>
+                <button class="delete-btn" title="Delete Domain" data-domain="${domain.domain}">Delete</button>
+            `;
+            div.querySelector('.delete-btn').onclick = () => deleteDomain(domain.domain);
+            domainsList.appendChild(div);
+        });
+    }
+
+    // Delete domain
+    async function deleteDomain(domain) {
+        if (!handle || !appPassword) {
+            setDomainStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        if (!confirm(`Delete domain "${domain}"? This will remove the domain mapping.`)) return;
+        setDomainStatus('Deleting domain...');
+        try {
+            const res = await fetch(`/domains/${encodeURIComponent(domain)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            if (!res.ok) throw new Error(await res.text());
+            setDomainStatus('Domain deleted successfully!');
+            loadDomains();
+        } catch (err) {
+            setDomainStatus('Delete failed: ' + err.message, true);
+        }
+    }
+
     // Helper function to format file size
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
@@ -297,18 +547,30 @@
         }
     }
 
-    // Status helper
+    // Status helpers
     function setStatus(msg, isError) {
         statusDiv.textContent = msg;
         statusDiv.style.color = isError ? '#e74c3c' : '#2c3e50';
     }
 
-    // Reload blobs when auth changes
-    document.getElementById('handle').addEventListener('change', loadBlobs);
-    document.getElementById('app-password').addEventListener('change', loadBlobs);
+    function setDomainStatus(msg, isError) {
+        domainStatusDiv.textContent = msg;
+        domainStatusDiv.style.color = isError ? '#e74c3c' : '#2c3e50';
+    }
 
-    // Initial
+    // Reload data when auth changes
+    document.getElementById('handle').addEventListener('change', () => {
+        loadBlobs();
+        loadDomains();
+    });
+    document.getElementById('app-password').addEventListener('change', () => {
+        loadBlobs();
+        loadDomains();
+    });
+
+    // Initial load
     loadBlobs();
+    loadDomains();
     </script>
 </body>
 </html>
