@@ -7,8 +7,7 @@ import { AtpAgent, BlobRef } from '@atproto/api';
 import type { 
   AtpCredentials, 
   BlobInfo, 
-  CANMappingRecord,
-  DomainMapping
+  CANMappingRecord
 } from '../types/index.js';
 import { 
   CAN_LEXICON_NAMESPACE,
@@ -181,90 +180,9 @@ export class AtProtocolService {
     }
   }
 
-  /**
-   * Store a domain mapping record in the user's repo
-   */
-  async putDomainMapping(
-    credentials: AtpCredentials,
-    mapping: DomainMapping
-  ): Promise<string> {
-    const agent = await this.getAgent(credentials);
-    
-    try {
-      const rkey = this.sanitizeKey(mapping.domain);
-      const collection = `${CAN_LEXICON_NAMESPACE}.${CANRecordType.DOMAIN}`;
-      
-      const response = await agent.api.com.atproto.repo.putRecord({
-        repo: agent.session?.did!,
-        collection,
-        rkey,
-        record: {
-          $type: collection,
-          ...mapping
-        }
-      });
-      
-      return response.data.uri;
-    } catch (error) {
-      throw new Error(`Failed to create domain mapping: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
-  /**
-   * Get a domain mapping record from the user's repo
-   */
-  async getDomainMapping(
-    credentials: AtpCredentials,
-    domain: string
-  ): Promise<DomainMapping | null> {
-    const agent = await this.getAgent(credentials);
-    
-    try {
-      const rkey = this.sanitizeKey(domain);
-      const collection = `${CAN_LEXICON_NAMESPACE}.${CANRecordType.DOMAIN}`;
-      
-      const response = await agent.api.com.atproto.repo.getRecord({
-        repo: agent.session?.did!,
-        collection,
-        rkey
-      });
-      
-      return response.data.value as unknown as DomainMapping;
-    } catch (error) {
-      if (error instanceof Error && (
-        error.message.includes('RecordNotFound') ||
-        error.message.includes('Could not locate record')
-      )) {
-        return null;
-      }
-      throw new Error(`Failed to get domain mapping: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
-  /**
-   * Get all domain mappings for a user
-   */
-  async getUserDomainMappings(
-    credentials: AtpCredentials
-  ): Promise<DomainMapping[]> {
-    const agent = await this.getAgent(credentials);
-    
-    try {
-      const collection = `${CAN_LEXICON_NAMESPACE}.${CANRecordType.DOMAIN}`;
-      
-      const response = await agent.api.com.atproto.repo.listRecords({
-        repo: agent.session?.did!,
-        collection,
-        limit: 100
-      });
-      
-      return response.data.records.map(record => 
-        record.value as unknown as DomainMapping
-      );
-    } catch (error) {
-      throw new Error(`Failed to list domain mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
+
 
   /**
    * Delete a CAN mapping record from the user's repo
