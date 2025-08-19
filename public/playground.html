@@ -189,13 +189,28 @@
             border-radius: 3px;
             font-family: monospace;
         }
+        .whitelist-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .whitelist-info {
+            background: #f8faff;
+            border: 1px solid #e1e8ff;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="text-align: center; margin-bottom: 2rem;">
             <a href="/" style="color: #667eea; text-decoration: none; margin-right: 1rem;">← Home</a>
-            <a href="/domains.html" style="color: #667eea; text-decoration: none;">🌐 Custom Domains</a>
+            <a href="/domains.html" style="color: #667eea; text-decoration: none; margin-right: 1rem;">🌐 Custom Domains</a>
+            <a href="/whitelist.html" style="color: #667eea; text-decoration: none;">🔒 Access Control</a>
         </div>
         
         <h1>🪣 Playground</h1>
@@ -214,6 +229,7 @@
         <div class="tabs">
             <div class="tab active" data-tab="blobs">📁 Blobs</div>
             <div class="tab" data-tab="domains">🌐 Domains</div>
+            <div class="tab" data-tab="whitelist">🔒 Whitelist</div>
         </div>
         
         <!-- Blobs Tab -->
@@ -246,6 +262,36 @@
                 <!-- Domain items will be rendered here -->
             </div>
         </div>
+        
+        <!-- Whitelist Tab -->
+        <div class="tab-content" id="whitelist-tab">
+            <div class="domain-form">
+                <h3>🔒 Whitelist Management (Admin Only)</h3>
+                <div class="whitelist-status" id="whitelist-status">
+                    <!-- Status will be loaded here -->
+                </div>
+                <div class="whitelist-controls">
+                    <button class="btn" onclick="enableWhitelist()">Enable Whitelist</button>
+                    <button class="btn" onclick="disableWhitelist()">Disable Whitelist</button>
+                    <button class="btn" onclick="reloadWhitelist()">Reload Whitelist</button>
+                </div>
+                <div class="domain-input">
+                    <input type="text" id="whitelist-handle-input" placeholder="user.bsky.social" />
+                    <button class="btn" onclick="addToWhitelist()">Add User</button>
+                </div>
+                <div class="domain-info">
+                    <h4>How it works:</h4>
+                    <p>• When enabled, only whitelisted users can access the service</p>
+                    <p>• When disabled, all authenticated users can access the service</p>
+                    <p>• Use this to control access and prevent abuse</p>
+                    <p><strong>⚠️ Admin Access Required:</strong> Only the configured admin can manage the whitelist</p>
+                </div>
+            </div>
+            <div class="status" id="whitelist-status-message"></div>
+            <div class="whitelist-users" id="whitelist-users">
+                <!-- Whitelisted users will be rendered here -->
+            </div>
+        </div>
     </div>
     <script>
     const dropzone = document.getElementById('dropzone');
@@ -254,6 +300,9 @@
     const blobsList = document.getElementById('blobs-list');
     const domainStatusDiv = document.getElementById('domain-status');
     const domainsList = document.getElementById('domains-list');
+    const whitelistStatusDiv = document.getElementById('whitelist-status');
+    const whitelistStatusMessageDiv = document.getElementById('whitelist-status-message');
+    const whitelistUsersDiv = document.getElementById('whitelist-users');
     let handle = '';
     let appPassword = '';
 
@@ -270,6 +319,8 @@
                 loadBlobs();
             } else if (tab.dataset.tab === 'domains') {
                 loadDomains();
+            } else if (tab.dataset.tab === 'whitelist') {
+                loadWhitelist();
             }
         });
     });
@@ -558,19 +609,219 @@
         domainStatusDiv.style.color = isError ? '#e74c3c' : '#2c3e50';
     }
 
+    // Whitelist functions
+    async function loadWhitelist() {
+        try {
+            // Load status (no auth required)
+            const statusRes = await fetch('/whitelist/status');
+            const statusData = await statusRes.json();
+            
+            whitelistStatusDiv.innerHTML = `
+                <div class="whitelist-info">
+                    <strong>Status:</strong> ${statusData.data.enabled ? '🟢 Enabled' : '🔴 Disabled'}
+                    <br><strong>Users:</strong> ${statusData.data.userCount}
+                    <br><strong>Last Updated:</strong> ${new Date(statusData.data.lastUpdated).toLocaleString()}
+                </div>
+            `;
+            
+            // Load users (requires auth)
+            if (handle && appPassword) {
+                const usersRes = await fetch('/whitelist/users', {
+                    headers: {
+                        'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                    }
+                });
+                
+                if (usersRes.ok) {
+                    const usersData = await usersRes.json();
+                    renderWhitelistUsers(usersData.data.users);
+                } else {
+                    setWhitelistStatus('Failed to load users: ' + await usersRes.text(), true);
+                }
+            } else {
+                setWhitelistStatus('Enter your handle and app password to manage users.', false);
+                whitelistUsersDiv.innerHTML = '';
+            }
+        } catch (err) {
+            setWhitelistStatus('Failed to load whitelist: ' + err.message, true);
+        }
+    }
+
+    function renderWhitelistUsers(users) {
+        whitelistUsersDiv.innerHTML = '';
+        if (users.length === 0) {
+            whitelistUsersDiv.innerHTML = '<p>No users in whitelist.</p>';
+            return;
+        }
+        
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'domain-item';
+            div.innerHTML = `
+                <div>
+                    <span class="domain-name">${user}</span>
+                </div>
+                <button class="delete-btn" title="Remove User" data-user="${user}">Remove</button>
+            `;
+            div.querySelector('.delete-btn').onclick = () => removeFromWhitelist(user);
+            whitelistUsersDiv.appendChild(div);
+        });
+    }
+
+    async function addToWhitelist() {
+        const handleInput = document.getElementById('whitelist-handle-input');
+        const userHandle = handleInput.value.trim();
+        
+        if (!userHandle) {
+            setWhitelistStatus('Please enter a handle to add.', true);
+            return;
+        }
+        
+        if (!handle || !appPassword) {
+            setWhitelistStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        setWhitelistStatus('Adding user to whitelist...');
+        try {
+            const res = await fetch('/whitelist/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                },
+                body: JSON.stringify({ handle: userHandle })
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            setWhitelistStatus('User added to whitelist successfully!');
+            handleInput.value = '';
+            loadWhitelist();
+        } catch (err) {
+            setWhitelistStatus('Failed to add user: ' + err.message, true);
+        }
+    }
+
+    async function removeFromWhitelist(userHandle) {
+        if (!handle || !appPassword) {
+            setWhitelistStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        if (!confirm(`Remove "${userHandle}" from whitelist?`)) return;
+        
+        setWhitelistStatus('Removing user from whitelist...');
+        try {
+            const res = await fetch(`/whitelist/users/${encodeURIComponent(userHandle)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            setWhitelistStatus('User removed from whitelist successfully!');
+            loadWhitelist();
+        } catch (err) {
+            setWhitelistStatus('Failed to remove user: ' + err.message, true);
+        }
+    }
+
+    async function enableWhitelist() {
+        if (!handle || !appPassword) {
+            setWhitelistStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        setWhitelistStatus('Enabling whitelist...');
+        try {
+            const res = await fetch('/whitelist/enable', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            setWhitelistStatus('Whitelist enabled successfully!');
+            loadWhitelist();
+        } catch (err) {
+            setWhitelistStatus('Failed to enable whitelist: ' + err.message, true);
+        }
+    }
+
+    async function disableWhitelist() {
+        if (!handle || !appPassword) {
+            setWhitelistStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        setWhitelistStatus('Disabling whitelist...');
+        try {
+            const res = await fetch('/whitelist/disable', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            setWhitelistStatus('Whitelist disabled successfully!');
+            loadWhitelist();
+        } catch (err) {
+            setWhitelistStatus('Failed to disable whitelist: ' + err.message, true);
+        }
+    }
+
+    async function reloadWhitelist() {
+        if (!handle || !appPassword) {
+            setWhitelistStatus('Please enter your handle and app password.', true);
+            return;
+        }
+        
+        setWhitelistStatus('Reloading whitelist...');
+        try {
+            const res = await fetch('/whitelist/reload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${handle}:${appPassword}`)
+                }
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            setWhitelistStatus('Whitelist reloaded successfully!');
+            loadWhitelist();
+        } catch (err) {
+            setWhitelistStatus('Failed to reload whitelist: ' + err.message, true);
+        }
+    }
+
+    function setWhitelistStatus(msg, isError) {
+        whitelistStatusMessageDiv.textContent = msg;
+        whitelistStatusMessageDiv.style.color = isError ? '#e74c3c' : '#2c3e50';
+    }
+
     // Reload data when auth changes
     document.getElementById('handle').addEventListener('change', () => {
         loadBlobs();
         loadDomains();
+        loadWhitelist();
     });
     document.getElementById('app-password').addEventListener('change', () => {
         loadBlobs();
         loadDomains();
+        loadWhitelist();
     });
 
     // Initial load
     loadBlobs();
     loadDomains();
+    loadWhitelist();
     </script>
 </body>
 </html>

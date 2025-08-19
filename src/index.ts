@@ -14,6 +14,7 @@ import { dirname, join } from 'path';
 // Import routes and services
 import blobsRouter from './routes/blobs.js';
 import domainsRouter from './routes/domains.js';
+import whitelistRouter from './routes/whitelist.js';
 import { domainDetectionMiddleware } from './middleware/domain.js';
 import { domainRegistry } from './services/domain-registry.js';
 import { blobCache } from './services/blob-cache.js';
@@ -123,7 +124,14 @@ app.get('/api', (req, res) => {
       'GET /domains': 'List all domains for authenticated user',
       'GET /domains/:domain': 'Get specific domain mapping',
       'PUT /domains/:domain': 'Update domain mapping settings',
-      'DELETE /domains/:domain': 'Delete domain mapping'
+      'DELETE /domains/:domain': 'Delete domain mapping',
+      'GET /whitelist/status': 'Get whitelist status (no auth required)',
+      'GET /whitelist/users': 'List all whitelisted users (admin only)',
+      'POST /whitelist/users': 'Add user to whitelist (admin only)',
+      'DELETE /whitelist/users/:handle': 'Remove user from whitelist (admin only)',
+      'POST /whitelist/enable': 'Enable whitelist (admin only)',
+      'POST /whitelist/disable': 'Disable whitelist (admin only)',
+      'POST /whitelist/reload': 'Reload whitelist from file (admin only)'
     },
     authentication: 'Basic Auth using AT Protocol handle and app password',
     documentation: 'https://github.com/librenews/bucket.social'
@@ -135,6 +143,9 @@ app.use('/blobs', blobsRouter);
 
 // Mount domain routes
 app.use('/domains', domainsRouter);
+
+// Mount whitelist routes
+app.use('/whitelist', whitelistRouter);
 
 // 404 handler
 app.all('*', (req, res) => {

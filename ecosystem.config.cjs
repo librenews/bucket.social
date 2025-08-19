@@ -1,6 +1,15 @@
 /**
- * PM2 Ecosystem Configuration for bucket.social CAN Service
- * Provides production-ready process management with clustering, monitoring, and auto-restart
+ * PM2 Ecosystem Configuration Example for bucket.social CAN Service
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. Copy this file to ecosystem.config.cjs
+ * 2. Update the deployment section with your actual server details
+ * 3. Add your SSH key to the server
+ * 4. Configure environment variables
+ * 
+ * DEPLOYMENT COMMANDS:
+ * pm2 deploy ecosystem.config.cjs production setup
+ * pm2 deploy ecosystem.config.cjs production
  */
 
 module.exports = {
@@ -40,8 +49,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        // Add your production environment variables here
-        // CORS_ORIGINS: 'https://yourdomain.com,https://api.yourdomain.com'
+        // REQUIRED: Add your production environment variables here
+        REDIS_URL: 'redis://localhost:6379',
+        CORS_ORIGINS: 'https://bucket.social,https://*.bucket.social,https://cdn.bucket.social'
       },
       log_file: './logs/combined.log',
       out_file: './logs/out.log',
@@ -80,7 +90,8 @@ module.exports = {
       env: {
         NODE_ENV: 'staging',
         PORT: 3001,
-        // Add staging-specific variables
+        REDIS_URL: 'redis://localhost:6379',
+        CORS_ORIGINS: 'https://staging.bucket.social'
       },
       log_file: './logs/staging-combined.log',
       out_file: './logs/staging-out.log', 
@@ -90,40 +101,50 @@ module.exports = {
     }
   ],
   
-  // Deployment configuration (optional)
+  // Deployment configuration
   deploy: {
     production: {
-      // SSH connection
-      user: 'node',
-      host: ['your-server.com'], // Replace with your server
+      // SSH connection details
+      user: 'deploy', // Replace with your server user
+      host: ['your-production-server.com'], // Replace with your server IP/domain
       ref: 'origin/main',
       repo: 'git@github.com:librenews/bucket.social.git',
       path: '/var/www/bucket.social',
+      
+      // SSH key configuration
+      // Make sure your SSH key is added to the server's authorized_keys
+      // ssh-copy-id -i ~/.ssh/id_rsa.pub deploy@your-production-server.com
       
       // Deployment commands
       'pre-setup': 'mkdir -p /var/www/bucket.social/logs',
       'post-setup': 'ls -la',
       'pre-deploy-local': '',
       'pre-deploy': 'git fetch --all',
-      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
+      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.cjs --env production',
       
-      // Environment
+      // Environment variables for deployment
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        PORT: 3000,
+        REDIS_URL: 'redis://localhost:6379',
+        CORS_ORIGINS: 'https://bucket.social,https://*.bucket.social,https://cdn.bucket.social'
       }
     },
     
     staging: {
-      user: 'node',
-      host: ['staging-server.com'], // Replace with your staging server
+      user: 'deploy',
+      host: ['your-staging-server.com'], // Replace with your staging server IP/domain
       ref: 'origin/develop', // Or whatever branch you use for staging
       repo: 'git@github.com:librenews/bucket.social.git',
       path: '/var/www/bucket.social-staging',
       
-      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env staging',
+      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.cjs --env staging',
       
       env: {
-        NODE_ENV: 'staging'
+        NODE_ENV: 'staging',
+        PORT: 3001,
+        REDIS_URL: 'redis://localhost:6379',
+        CORS_ORIGINS: 'https://staging.bucket.social'
       }
     }
   }

@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import type { AtpCredentials, AuthenticatedRequest } from '../types/index.js';
+import { whitelist } from '../services/whitelist.js';
 
 /**
  * Middleware to extract and validate AT Protocol credentials from Basic Auth
@@ -53,6 +54,21 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     }
     
     console.log('Auth debug - handle validation passed:', identifier);
+    
+    // Check whitelist if enabled
+    if (!whitelist.isUserWhitelisted(identifier.trim())) {
+      console.log('Auth debug - user not whitelisted:', identifier);
+      res.status(403).json({
+        error: 'ACCESS_DENIED',
+        message: 'Your handle is not authorized to use this service. Please contact the administrator to request access.',
+        statusCode: 403,
+        timestamp: new Date().toISOString(),
+        help: 'If you believe this is an error, please contact support with your handle.'
+      });
+      return;
+    }
+    
+    console.log('Auth debug - user whitelisted:', identifier);
     
     // Attach credentials to request
     req.atpCredentials = {

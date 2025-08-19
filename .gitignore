@@ -129,3 +129,6 @@ test-uploads/
 
 # PM2 Ecosystem config (contains sensitive deployment info)
 ecosystem.config.cjs
+
+# Whitelist data
+data/whitelist.json

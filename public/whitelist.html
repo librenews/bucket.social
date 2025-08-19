@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Control - bucket.social</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem 0;
+        }
+
+        .info-box {
+            background: #f8f9ff;
+            border: 2px solid #e1e8ff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .code-inline {
+            background: #f1f5f9;
+            color: #2d3748;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-links a {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .status-enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .api-table th,
+        .api-table td {
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .api-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .api-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .endpoint {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            color: #667eea;
+        }
+
+        .method {
+            font-weight: bold;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .method-get { background: #d4edda; color: #155724; }
+        .method-post { background: #cce5ff; color: #004085; }
+        .method-delete { background: #f8d7da; color: #721c24; }
+
+        .auth-required {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .admin-only {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .contact-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .contact-info h3 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .contact-info a {
+            color: #ffeaa7;
+            text-decoration: none;
+        }
+
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .content {
+                padding: 2rem 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-links a {
+                display: block;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Access Control</h1>
+            <p>Understanding the whitelist system and how to request access</p>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">🏠 Home</a>
+            <a href="/playground.html">🔧 Playground</a>
+            <a href="/domains.html">🌐 Custom Domains</a>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <h2>What is the Whitelist?</h2>
+                <p>The whitelist is an access control system that allows the service administrator to control who can use bucket.social. When enabled, only authorized users can upload blobs, register domains, or access any service features.</p>
+                
+                <div class="info-box">
+                    <strong>Why use a whitelist?</strong>
+                    <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                        <li>Prevent abuse and unauthorized usage</li>
+                        <li>Control costs and resource consumption</li>
+                        <li>Ensure quality of service for authorized users</li>
+                        <li>Comply with usage policies and terms of service</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>How It Works</h2>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <strong>Whitelist Status</strong>
+                    <p>The whitelist can be either enabled or disabled by the administrator.</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <strong>When Disabled</strong>
+                    <p>All authenticated users can access the service normally. No restrictions apply.</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <strong>When Enabled</strong>
+                    <p>Only users whose handles are in the whitelist can access the service. All others receive an <code class="code-inline">ACCESS_DENIED</code> error.</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <strong>Authentication Flow</strong>
+                    <p>When you make a request, the system first checks if the whitelist is enabled, then verifies your handle is authorized before proceeding with AT Protocol authentication.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Checking Whitelist Status</h2>
+                <p>You can check the current whitelist status using the public API endpoint:</p>
+                
+                <div class="code-block">
+GET /whitelist/status
+                </div>
+
+                <p>This endpoint returns information about whether the whitelist is enabled and how many users are currently authorized:</p>
+
+                <div class="code-block">
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "userCount": 5,
+    "lastUpdated": "2025-08-19T00:47:40.000Z",
+    "filePath": "/path/to/whitelist.json"
+  }
+}
+                </div>
+
+                <div class="info-box">
+                    <strong>Note:</strong> This endpoint is public and requires no authentication. You can use it to check if the whitelist is enabled before attempting to use the service.
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Requesting Access</h2>
+                
+                <div class="warning-box">
+                    <strong>⚠️ Important:</strong> Only the service administrator can add users to the whitelist. There is no self-service registration.
+                </div>
+
+                <h3>How to Request Access</h3>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <strong>Contact the Administrator</strong>
+                    <p>Reach out to the service administrator with your request. Include your AT Protocol handle (e.g., <code class="code-inline">yourname.bsky.social</code>).</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <strong>Provide Context</strong>
+                    <p>Explain why you need access to the service and how you plan to use it. This helps the administrator make an informed decision.</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <strong>Wait for Approval</strong>
+                    <p>The administrator will review your request and add your handle to the whitelist if approved.</p>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <strong>Start Using the Service</strong>
+                    <p>Once added to the whitelist, you can use the service normally with your AT Protocol credentials.</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Need Access?</h3>
+                    <p>Contact the service administrator to request whitelist access.</p>
+                    <p>Include your AT Protocol handle and explain your use case.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Error Messages</h2>
+                
+                <h3>ACCESS_DENIED</h3>
+                <p>This error occurs when the whitelist is enabled and your handle is not authorized:</p>
+                
+                <div class="code-block">
+{
+  "error": "ACCESS_DENIED",
+  "message": "Your handle is not authorized to use this service. Please contact the administrator to request access.",
+  "statusCode": 403,
+  "timestamp": "2025-08-19T00:47:45.001Z",
+  "help": "If you believe this is an error, please contact support with your handle."
+}
+                </div>
+
+                <div class="info-box">
+                    <strong>What to do:</strong> Contact the service administrator to request access. Include your AT Protocol handle in your request.
+                </div>
+
+                <h3>ADMIN_ACCESS_DENIED</h3>
+                <p>This error occurs when trying to access admin-only endpoints without admin privileges:</p>
+                
+                <div class="code-block">
+{
+  "error": "ADMIN_ACCESS_DENIED",
+  "message": "Admin privileges required for this operation",
+  "statusCode": 403,
+  "timestamp": "2025-08-19T00:47:28.995Z",
+  "help": "Only the configured admin can perform this action"
+}
+                </div>
+
+                <div class="info-box">
+                    <strong>What to do:</strong> Only the service administrator can access whitelist management endpoints. Regular users should contact the admin for whitelist changes.
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>API Reference</h2>
+                
+                <p>The following endpoints are available for whitelist management:</p>
+
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Endpoint</th>
+                            <th>Description</th>
+                            <th>Auth</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method method-get">GET</span></td>
+                            <td class="endpoint">/whitelist/status</td>
+                            <td>Get whitelist status and configuration</td>
+                            <td><span class="auth-required">None</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-get">GET</span></td>
+                            <td class="endpoint">/whitelist/users</td>
+                            <td>List all whitelisted users</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-post">POST</span></td>
+                            <td class="endpoint">/whitelist/users</td>
+                            <td>Add user to whitelist</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-delete">DELETE</span></td>
+                            <td class="endpoint">/whitelist/users/:handle</td>
+                            <td>Remove user from whitelist</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-post">POST</span></td>
+                            <td class="endpoint">/whitelist/enable</td>
+                            <td>Enable whitelist</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-post">POST</span></td>
+                            <td class="endpoint">/whitelist/disable</td>
+                            <td>Disable whitelist</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="method method-post">POST</span></td>
+                            <td class="endpoint">/whitelist/reload</td>
+                            <td>Reload whitelist from file</td>
+                            <td><span class="admin-only">Admin Only</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>Examples</h2>
+                
+                <h3>Check Whitelist Status</h3>
+                <div class="code-block">
+curl -s http://localhost:3002/whitelist/status | jq .
+                </div>
+
+                <h3>Request with Authentication (Whitelisted User)</h3>
+                <div class="code-block">
+curl -H "Authorization: Basic $(echo -n 'yourhandle.bsky.social:your-app-password' | base64)" \
+     http://localhost:3002/blobs
+                </div>
+
+                <h3>Request with Authentication (Non-Whitelisted User)</h3>
+                <div class="code-block">
+curl -H "Authorization: Basic $(echo -n 'nonwhitelisted.bsky.social:password' | base64)" \
+     http://localhost:3002/blobs
+# Returns: {"error": "ACCESS_DENIED", "statusCode": 403, ...}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Best Practices</h2>
+                
+                <div class="info-box">
+                    <strong>For Users:</strong>
+                    <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                        <li>Always check whitelist status before attempting to use the service</li>
+                        <li>Contact the administrator promptly if you receive ACCESS_DENIED</li>
+                        <li>Provide clear context when requesting access</li>
+                        <li>Use the service responsibly once granted access</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <strong>For Administrators:</strong>
+                    <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                        <li>Monitor whitelist requests and respond promptly</li>
+                        <li>Regularly review the whitelist and remove inactive users</li>
+                        <li>Use the playground interface for easy whitelist management</li>
+                        <li>Consider temporarily disabling the whitelist for maintenance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
